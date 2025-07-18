@@ -1,0 +1,26 @@
+// Production Configuration
+window.PRODUCTION_CONFIG = {
+    // Supabase Configuration
+    SUPABASE_URL: 'https://oefotqkryluvzfahvavj.supabase.co',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM',
+    
+    // Environment Detection
+    IS_PRODUCTION: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1',
+    
+    // API Endpoints
+    API_BASE_URL: window.location.hostname === 'localhost' 
+        ? 'http://localhost:8080' 
+        : window.location.origin,
+    
+    // Real-time sync configuration
+    SYNC_ENABLED: true,
+    SYNC_INTERVAL: 2000, // 2 seconds
+    
+    // Debug mode
+    DEBUG: window.location.hostname === 'localhost'
+};
+
+// Initialize configuration
+console.log('🔧 Environment:', window.PRODUCTION_CONFIG.IS_PRODUCTION ? 'Production' : 'Development');
+console.log('🌐 API Base URL:', window.PRODUCTION_CONFIG.API_BASE_URL);
+console.log('🔗 Supabase URL:', window.PRODUCTION_CONFIG.SUPABASE_URL);
