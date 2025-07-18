@@ -1,8 +1,8 @@
 // Production Configuration
 window.PRODUCTION_CONFIG = {
     // Supabase Configuration
-    SUPABASE_URL: 'https://oefotqkryluvzfahvavj.supabase.co',
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM',
+    SUPABASE_URL: 'https://adhhsenlvelrohtetieb.supabase.co',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkaGhzZW5sdmVscm9odGV0aWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDA0MzUsImV4cCI6MjA2ODM3NjQzNX0.o1q8-BHycnHH4ycN-Qofw6ADw2djsA7iVO-xww68JZU',
     
     // Environment Detection
     IS_PRODUCTION: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1',

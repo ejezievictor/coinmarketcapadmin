@@ -948,8 +948,8 @@
             try {
                 // Initialize Supabase if not already done
                 if (!window.supabaseClient) {
-                    const supabaseUrl = 'https://oefotqkryluvzfahvavj.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
+                    const supabaseUrl = 'https://adhhsenlvelrohtetieb.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkaGhzZW5sdmVscm9odGV0aWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDA0MzUsImV4cCI6MjA2ODM3NjQzNX0.o1q8-BHycnHH4ycN-Qofw6ADw2djsA7iVO-xww68JZU';
                     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                 }
 
@@ -1019,8 +1019,8 @@
             try {
                 // Initialize Supabase client if not already done
                 if (!window.supabaseClient) {
-                    const supabaseUrl = window.PRODUCTION_CONFIG?.SUPABASE_URL || 'https://oefotqkryluvzfahvavj.supabase.co';
-                    const supabaseKey = window.PRODUCTION_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
+                    const supabaseUrl = window.PRODUCTION_CONFIG?.SUPABASE_URL || 'https://adhhsenlvelrohtetieb.supabase.co';
+                    const supabaseKey = window.PRODUCTION_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkaGhzZW5sdmVscm9odGV0aWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDA0MzUsImV4cCI6MjA2ODM3NjQzNX0.o1q8-BHycnHH4ycN-Qofw6ADw2djsA7iVO-xww68JZU';
                     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                     console.log('✅ Supabase client initialized');
                     console.log('🔗 Supabase URL:', supabaseUrl);
