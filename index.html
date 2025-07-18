@@ -822,6 +822,7 @@
                         <div id="searchHints" class="search-hints"></div>
                     </div>
                     <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
+                    <button class="refresh-btn" onclick="testSupabaseConnection()" style="margin-left: 8px; background: #E53E3E;">🧪 Test DB</button>
                 </div>
             </div>
 
@@ -940,6 +941,75 @@
         let filteredUsers = [];
         let currentSearchTerm = '';
 
+        // Test Supabase connection
+        async function testSupabaseConnection() {
+            console.log('🧪 Testing Supabase connection...');
+
+            try {
+                // Initialize Supabase if not already done
+                if (!window.supabase) {
+                    const supabaseUrl = 'https://oefotqkryluvzfahvavj.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
+                    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                }
+
+                // Test 1: Basic connection
+                console.log('🔗 Test 1: Basic connection test...');
+                const { data: healthCheck, error: healthError } = await window.supabase
+                    .from('users')
+                    .select('count', { count: 'exact' })
+                    .limit(0);
+
+                console.log('🔗 Health check result:', { healthCheck, healthError });
+
+                // Test 2: Try to fetch all users
+                console.log('👥 Test 2: Fetching all users...');
+                const { data: allUsers, error: usersError } = await window.supabase
+                    .from('users')
+                    .select('*');
+
+                console.log('👥 All users result:', { allUsers, usersError });
+
+                // Test 3: Try to insert a test user (then delete it)
+                console.log('➕ Test 3: Testing insert capability...');
+                const testUser = {
+                    user_id: 'test-' + Date.now(),
+                    email: 'test@example.com',
+                    balance: 0,
+                    status: 'active',
+                    registration_date: new Date().toLocaleDateString(),
+                    last_login: new Date().toLocaleDateString(),
+                    created_at: new Date().toISOString()
+                };
+
+                const { data: insertData, error: insertError } = await window.supabase
+                    .from('users')
+                    .insert([testUser]);
+
+                console.log('➕ Insert test result:', { insertData, insertError });
+
+                // Clean up test user
+                if (!insertError) {
+                    const { error: deleteError } = await window.supabase
+                        .from('users')
+                        .delete()
+                        .eq('email', 'test@example.com');
+                    console.log('🗑️ Test user cleanup:', { deleteError });
+                }
+
+                // Show results
+                if (healthError || usersError) {
+                    alert(`❌ Supabase Connection Failed!\n\nHealth Check: ${healthError?.message || 'OK'}\nUsers Query: ${usersError?.message || 'OK'}\n\nCheck console for details.`);
+                } else {
+                    alert(`✅ Supabase Connection Successful!\n\nUsers found: ${allUsers?.length || 0}\nInsert test: ${insertError ? 'Failed' : 'Success'}\n\nCheck console for details.`);
+                }
+
+            } catch (error) {
+                console.error('❌ Test failed:', error);
+                alert(`❌ Test Failed: ${error.message}\n\nCheck console for details.`);
+            }
+        }
+
         // Load users from Supabase database
         async function loadUsers() {
             if (!checkAdminAuth()) return;
@@ -953,7 +1023,18 @@
                     const supabaseKey = window.PRODUCTION_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
                     window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
                     console.log('✅ Supabase client initialized');
+                    console.log('🔗 Supabase URL:', supabaseUrl);
+                    console.log('🔑 Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '...');
                 }
+
+                console.log('🔍 Attempting to fetch users from Supabase...');
+
+                // Test Supabase connection first
+                const { data: testData, error: testError } = await window.supabase
+                    .from('users')
+                    .select('count', { count: 'exact' });
+
+                console.log('🧪 Supabase connection test:', { testData, testError });
 
                 // Fetch users from Supabase
                 const { data: users, error } = await window.supabase
@@ -961,14 +1042,27 @@
                     .select('*')
                     .order('created_at', { ascending: false });
 
+                console.log('📊 Supabase query result:', { users, error });
+
                 if (error) {
                     console.error('❌ Error loading users from Supabase:', error);
+                    console.error('❌ Error details:', error.message, error.details, error.hint);
+
+                    // Try to check if table exists
+                    const { data: tableCheck, error: tableError } = await window.supabase
+                        .from('users')
+                        .select('*')
+                        .limit(1);
+
+                    console.log('🔍 Table existence check:', { tableCheck, tableError });
+
                     // Fallback to localStorage
                     allUsers = JSON.parse(localStorage.getItem('users') || '[]');
                     console.log('📦 Fallback: Loaded users from localStorage:', allUsers.length);
                 } else {
                     allUsers = users || [];
                     console.log('✅ Loaded users from Supabase:', allUsers.length);
+                    console.log('👥 User data:', allUsers);
                 }
 
                 // If there's an active search, maintain it
@@ -983,6 +1077,8 @@
 
             } catch (error) {
                 console.error('❌ Error in loadUsers:', error);
+                console.error('❌ Error stack:', error.stack);
+
                 // Fallback to localStorage
                 allUsers = JSON.parse(localStorage.getItem('users') || '[]');
                 console.log('📦 Fallback: Loaded users from localStorage:', allUsers.length);
