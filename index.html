@@ -947,15 +947,15 @@
 
             try {
                 // Initialize Supabase if not already done
-                if (!window.supabase) {
+                if (!window.supabaseClient) {
                     const supabaseUrl = 'https://oefotqkryluvzfahvavj.supabase.co';
                     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
-                    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                 }
 
                 // Test 1: Basic connection
                 console.log('🔗 Test 1: Basic connection test...');
-                const { data: healthCheck, error: healthError } = await window.supabase
+                const { data: healthCheck, error: healthError } = await window.supabaseClient
                     .from('users')
                     .select('count', { count: 'exact' })
                     .limit(0);
@@ -964,7 +964,7 @@
 
                 // Test 2: Try to fetch all users
                 console.log('👥 Test 2: Fetching all users...');
-                const { data: allUsers, error: usersError } = await window.supabase
+                const { data: allUsers, error: usersError } = await window.supabaseClient
                     .from('users')
                     .select('*');
 
@@ -982,7 +982,7 @@
                     created_at: new Date().toISOString()
                 };
 
-                const { data: insertData, error: insertError } = await window.supabase
+                const { data: insertData, error: insertError } = await window.supabaseClient
                     .from('users')
                     .insert([testUser]);
 
@@ -990,7 +990,7 @@
 
                 // Clean up test user
                 if (!insertError) {
-                    const { error: deleteError } = await window.supabase
+                    const { error: deleteError } = await window.supabaseClient
                         .from('users')
                         .delete()
                         .eq('email', 'test@example.com');
@@ -1017,11 +1017,11 @@
             console.log('📊 Loading users from Supabase database...');
 
             try {
-                // Initialize Supabase if not already done
-                if (!window.supabase) {
+                // Initialize Supabase client if not already done
+                if (!window.supabaseClient) {
                     const supabaseUrl = window.PRODUCTION_CONFIG?.SUPABASE_URL || 'https://oefotqkryluvzfahvavj.supabase.co';
                     const supabaseKey = window.PRODUCTION_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
-                    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                     console.log('✅ Supabase client initialized');
                     console.log('🔗 Supabase URL:', supabaseUrl);
                     console.log('🔑 Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '...');
@@ -1030,14 +1030,14 @@
                 console.log('🔍 Attempting to fetch users from Supabase...');
 
                 // Test Supabase connection first
-                const { data: testData, error: testError } = await window.supabase
+                const { data: testData, error: testError } = await window.supabaseClient
                     .from('users')
                     .select('count', { count: 'exact' });
 
                 console.log('🧪 Supabase connection test:', { testData, testError });
 
                 // Fetch users from Supabase
-                const { data: users, error } = await window.supabase
+                const { data: users, error } = await window.supabaseClient
                     .from('users')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -1049,7 +1049,7 @@
                     console.error('❌ Error details:', error.message, error.details, error.hint);
 
                     // Try to check if table exists
-                    const { data: tableCheck, error: tableError } = await window.supabase
+                    const { data: tableCheck, error: tableError } = await window.supabaseClient
                         .from('users')
                         .select('*')
                         .limit(1);
@@ -1237,7 +1237,7 @@
         async function editUser(email) {
             try {
                 // Get user from Supabase
-                const { data: user, error: fetchError } = await window.supabase
+                const { data: user, error: fetchError } = await window.supabaseClient
                     .from('users')
                     .select('*')
                     .eq('email', email)
@@ -1256,7 +1256,7 @@
                     const balanceChange = parseFloat(newBalance) - oldBalance;
 
                     // Update user balance in Supabase
-                    const { error: updateError } = await window.supabase
+                    const { error: updateError } = await window.supabaseClient
                         .from('users')
                         .update({ balance: parseFloat(newBalance) })
                         .eq('email', email);
@@ -1286,7 +1286,7 @@
         async function toggleUserStatus(email, newStatus) {
             try {
                 // Check if user exists in Supabase
-                const { data: user, error: fetchError } = await window.supabase
+                const { data: user, error: fetchError } = await window.supabaseClient
                     .from('users')
                     .select('*')
                     .eq('email', email)
@@ -1303,7 +1303,7 @@
 
                 if (confirm(confirmMessage)) {
                     // Update user status in Supabase
-                    const { error: updateError } = await window.supabase
+                    const { error: updateError } = await window.supabaseClient
                         .from('users')
                         .update({ status: newStatus })
                         .eq('email', email);
@@ -1339,7 +1339,7 @@
                 };
 
                 // Save to Supabase transactions table
-                const { error } = await window.supabase
+                const { error } = await window.supabaseClient
                     .from('transactions')
                     .insert([transaction]);
 
