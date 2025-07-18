@@ -1141,7 +1141,8 @@
                     <td>${user.last_login || 'N/A'}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn edit-btn" onclick="editUser('${user.email}')">✏️ Edit</button>
+                            <button class="action-btn edit-btn" onclick="editUserBalance('${user.email}')" title="Edit wallet balance">💰 Balance</button>
+                            <button class="action-btn edit-btn" onclick="editUserCredentials('${user.email}')" title="Edit email and password">🔐 Credentials</button>
                             ${isBlocked ?
                                 `<button class="action-btn unblock-btn" onclick="toggleUserStatus('${user.email}', 'active')">✅ Unblock</button>` :
                                 `<button class="action-btn block-btn" onclick="toggleUserStatus('${user.email}', 'blocked')">🚫 Block</button>`
@@ -1203,8 +1204,11 @@
                     </div>
 
                     <div class="mobile-actions">
-                        <button class="mobile-action-btn edit-btn" onclick="editUser('${user.email}')">
-                            ✏️ Edit Balance
+                        <button class="mobile-action-btn edit-btn" onclick="editUserBalance('${user.email}')">
+                            💰 Edit Balance
+                        </button>
+                        <button class="mobile-action-btn edit-btn" onclick="editUserCredentials('${user.email}')">
+                            🔐 Edit Credentials
                         </button>
                         ${isBlocked ?
                             `<button class="mobile-action-btn unblock-btn" onclick="toggleUserStatus('${user.email}', 'active')">
@@ -1233,8 +1237,8 @@
             window.location.href = 'index.html';
         }
 
-        // Edit user function
-        async function editUser(email) {
+        // Edit user balance function
+        async function editUserBalance(email) {
             try {
                 // Get user from Supabase
                 const { data: user, error: fetchError } = await window.supabaseClient
@@ -1270,6 +1274,28 @@
                     // Add transaction record
                     await addTransactionRecord(email, balanceChange, 'admin_adjustment');
 
+                    // Create balance update notification for main website
+                    const balanceUpdate = {
+                        userEmail: email,
+                        oldBalance: oldBalance,
+                        newBalance: parseFloat(newBalance),
+                        timestamp: Date.now(),
+                        date: new Date().toLocaleDateString(),
+                        time: new Date().toLocaleTimeString(),
+                        amount: Math.abs(parseFloat(newBalance) - oldBalance),
+                        action: parseFloat(newBalance) > oldBalance ? 'add' : 'subtract'
+                    };
+                    localStorage.setItem('balance_update', JSON.stringify(balanceUpdate));
+
+                    // Also update the user directly in localStorage for immediate sync
+                    const users = JSON.parse(localStorage.getItem('users') || '[]');
+                    const userIndex = users.findIndex(u => u.email === email);
+                    if (userIndex !== -1) {
+                        users[userIndex].balance = parseFloat(newBalance);
+                        localStorage.setItem('users', JSON.stringify(users));
+                        console.log('✅ User balance updated in localStorage for immediate sync');
+                    }
+
                     // Refresh display
                     await loadUsers();
 
@@ -1277,8 +1303,136 @@
                     console.log('✅ Balance updated successfully for:', email);
                 }
             } catch (error) {
-                console.error('❌ Error in editUser:', error);
+                console.error('❌ Error in editUserBalance:', error);
                 alert('Error: Could not update user balance');
+            }
+        }
+
+        // Edit user credentials function (email and password)
+        async function editUserCredentials(email) {
+            try {
+                // Get user from Supabase
+                const { data: user, error: fetchError } = await window.supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .single();
+
+                if (fetchError || !user) {
+                    console.error('❌ Error fetching user:', fetchError);
+                    alert('User not found in database');
+                    return;
+                }
+
+                // Create modal for editing credentials
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: #1A202C; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;">
+                        <h3 style="color: #FFFFFF; margin-bottom: 20px; text-align: center;">🔐 Edit User Credentials</h3>
+                        <p style="color: #A0AEC0; margin-bottom: 20px; text-align: center;">Current user: ${email}</p>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="color: #FFFFFF; display: block; margin-bottom: 8px;">New Email:</label>
+                            <input type="email" id="newEmail" value="${email}" style="width: 100%; padding: 12px; background: #2D3748; border: 1px solid #4A5568; border-radius: 6px; color: white; box-sizing: border-box;">
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="color: #FFFFFF; display: block; margin-bottom: 8px;">New Password:</label>
+                            <input type="password" id="newPassword" placeholder="Enter new password (leave blank to keep current)" style="width: 100%; padding: 12px; background: #2D3748; border: 1px solid #4A5568; border-radius: 6px; color: white; box-sizing: border-box;">
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button onclick="saveCredentials('${email}')" style="background: #3861FB; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                💾 Save Changes
+                            </button>
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #4A5568; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">
+                                ❌ Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+            } catch (error) {
+                console.error('❌ Error in editUserCredentials:', error);
+                alert('Error: Could not load user credentials');
+            }
+        }
+
+        // Save credentials function
+        async function saveCredentials(oldEmail) {
+            const newEmail = document.getElementById('newEmail').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!newEmail) {
+                alert('Email cannot be empty');
+                return;
+            }
+
+            try {
+                // Update in Supabase
+                const updateData = { email: newEmail };
+                if (newPassword) {
+                    updateData.password = newPassword;
+                }
+
+                const { error: updateError } = await window.supabaseClient
+                    .from('users')
+                    .update(updateData)
+                    .eq('email', oldEmail);
+
+                if (updateError) {
+                    console.error('❌ Error updating credentials:', updateError);
+                    alert('Error: Could not update credentials in database');
+                    return;
+                }
+
+                // Update in localStorage
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                const userIndex = users.findIndex(u => u.email === oldEmail);
+                if (userIndex !== -1) {
+                    users[userIndex].email = newEmail;
+                    if (newPassword) {
+                        users[userIndex].password = newPassword;
+                    }
+                    localStorage.setItem('users', JSON.stringify(users));
+                }
+
+                // Create notification for main website
+                const credentialUpdate = {
+                    oldEmail: oldEmail,
+                    newEmail: newEmail,
+                    passwordChanged: !!newPassword,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('credential_update', JSON.stringify(credentialUpdate));
+
+                alert(`Credentials updated successfully!\nEmail: ${oldEmail} → ${newEmail}${newPassword ? '\nPassword: Updated' : ''}`);
+
+                // Close modal
+                document.querySelector('[style*="position: fixed"]').remove();
+
+                // Reload dashboard
+                loadDashboardData();
+
+            } catch (error) {
+                console.error('❌ Error saving credentials:', error);
+                alert('Error: Could not save credentials');
             }
         }
 
