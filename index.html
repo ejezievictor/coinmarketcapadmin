@@ -940,17 +940,53 @@
         let filteredUsers = [];
         let currentSearchTerm = '';
 
-        // Load users from localStorage
-        function loadUsers() {
+        // Load users from Supabase database
+        async function loadUsers() {
             if (!checkAdminAuth()) return;
 
-            console.log('📊 Loading users for admin panel...');
-            allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+            console.log('📊 Loading users from Supabase database...');
 
-            // If there's an active search, maintain it
-            if (currentSearchTerm) {
-                performSearch();
-            } else {
+            try {
+                // Initialize Supabase if not already done
+                if (!window.supabase) {
+                    const supabaseUrl = window.PRODUCTION_CONFIG?.SUPABASE_URL || 'https://oefotqkryluvzfahvavj.supabase.co';
+                    const supabaseKey = window.PRODUCTION_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZm90d2tyeWx1dnpmYWh2YXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0MTE0NzIsImV4cCI6MjA2Nzk4NzQ3Mn0.yM9HVDf6ElzlfMGcA82P0VnpePy2qe8CVuyoiDYcEMM';
+                    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                    console.log('✅ Supabase client initialized');
+                }
+
+                // Fetch users from Supabase
+                const { data: users, error } = await window.supabase
+                    .from('users')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('❌ Error loading users from Supabase:', error);
+                    // Fallback to localStorage
+                    allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+                    console.log('📦 Fallback: Loaded users from localStorage:', allUsers.length);
+                } else {
+                    allUsers = users || [];
+                    console.log('✅ Loaded users from Supabase:', allUsers.length);
+                }
+
+                // If there's an active search, maintain it
+                if (currentSearchTerm) {
+                    performSearch();
+                } else {
+                    filteredUsers = allUsers;
+                    updateStats(allUsers);
+                    populateUsersTable(allUsers);
+                    hideSearchResults();
+                }
+
+            } catch (error) {
+                console.error('❌ Error in loadUsers:', error);
+                // Fallback to localStorage
+                allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+                console.log('📦 Fallback: Loaded users from localStorage:', allUsers.length);
+
                 filteredUsers = allUsers;
                 updateStats(allUsers);
                 populateUsersTable(allUsers);
@@ -1102,73 +1138,135 @@
         }
 
         // Edit user function
-        function editUser(email) {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => u.email === email);
+        async function editUser(email) {
+            try {
+                // Get user from Supabase
+                const { data: user, error: fetchError } = await window.supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .single();
 
-            if (!user) {
-                alert('User not found');
-                return;
-            }
+                if (fetchError || !user) {
+                    console.error('❌ Error fetching user:', fetchError);
+                    alert('User not found in database');
+                    return;
+                }
 
-            const newBalance = prompt(`Edit balance for ${email}:`, user.balance || 0);
+                const newBalance = prompt(`Edit balance for ${email}:`, user.balance || 0);
 
-            if (newBalance !== null && !isNaN(newBalance)) {
-                const oldBalance = user.balance || 0;
-                user.balance = parseFloat(newBalance);
+                if (newBalance !== null && !isNaN(newBalance)) {
+                    const oldBalance = user.balance || 0;
+                    const balanceChange = parseFloat(newBalance) - oldBalance;
 
-                // Save updated users
-                localStorage.setItem('users', JSON.stringify(users));
+                    // Update user balance in Supabase
+                    const { error: updateError } = await window.supabase
+                        .from('users')
+                        .update({ balance: parseFloat(newBalance) })
+                        .eq('email', email);
 
-                // Add transaction record
-                addTransactionRecord(email, parseFloat(newBalance) - oldBalance, 'admin_adjustment');
+                    if (updateError) {
+                        console.error('❌ Error updating balance:', updateError);
+                        alert('Error: Could not update balance in database');
+                        return;
+                    }
 
-                // Refresh display
-                loadUsers();
+                    // Add transaction record
+                    await addTransactionRecord(email, balanceChange, 'admin_adjustment');
 
-                alert(`Balance updated successfully!\n${email}: $${oldBalance.toFixed(2)} → $${user.balance.toFixed(2)}`);
+                    // Refresh display
+                    await loadUsers();
+
+                    alert(`Balance updated successfully!\n${email}: $${oldBalance.toFixed(2)} → $${parseFloat(newBalance).toFixed(2)}`);
+                    console.log('✅ Balance updated successfully for:', email);
+                }
+            } catch (error) {
+                console.error('❌ Error in editUser:', error);
+                alert('Error: Could not update user balance');
             }
         }
 
         // Toggle user status (block/unblock)
-        function toggleUserStatus(email, newStatus) {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => u.email === email);
+        async function toggleUserStatus(email, newStatus) {
+            try {
+                // Check if user exists in Supabase
+                const { data: user, error: fetchError } = await window.supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .single();
 
-            if (!user) {
-                alert('User not found');
-                return;
-            }
+                if (fetchError || !user) {
+                    console.error('❌ Error fetching user:', fetchError);
+                    alert('User not found in database');
+                    return;
+                }
 
-            const action = newStatus === 'blocked' ? 'block' : 'unblock';
-            const confirmMessage = `Are you sure you want to ${action} ${email}?`;
+                const action = newStatus === 'blocked' ? 'block' : 'unblock';
+                const confirmMessage = `Are you sure you want to ${action} ${email}?`;
 
-            if (confirm(confirmMessage)) {
-                user.status = newStatus;
-                localStorage.setItem('users', JSON.stringify(users));
+                if (confirm(confirmMessage)) {
+                    // Update user status in Supabase
+                    const { error: updateError } = await window.supabase
+                        .from('users')
+                        .update({ status: newStatus })
+                        .eq('email', email);
 
-                // If user is currently logged in and being blocked, they'll be logged out on next session check
-                loadUsers();
+                    if (updateError) {
+                        console.error('❌ Error updating user status:', updateError);
+                        alert('Error: Could not update user status in database');
+                        return;
+                    }
 
-                alert(`User ${email} has been ${action}ed successfully.`);
+                    // Refresh display
+                    await loadUsers();
+
+                    alert(`User ${email} has been ${action}ed successfully.`);
+                    console.log(`✅ User ${email} status updated to:`, newStatus);
+                }
+            } catch (error) {
+                console.error('❌ Error in toggleUserStatus:', error);
+                alert('Error: Could not update user status');
             }
         }
 
         // Add transaction record
-        function addTransactionRecord(email, amount, type) {
-            const transactionKey = `transactions_${email}`;
-            const transactions = JSON.parse(localStorage.getItem(transactionKey) || '[]');
+        async function addTransactionRecord(email, amount, type) {
+            try {
+                const transaction = {
+                    user_email: email,
+                    type: type,
+                    amount: amount,
+                    date: new Date().toISOString(),
+                    description: amount > 0 ? 'Admin deposit' : 'Admin adjustment',
+                    created_at: new Date().toISOString()
+                };
 
-            const transaction = {
-                id: Date.now(),
-                type: type,
-                amount: amount,
-                date: new Date().toISOString(),
-                description: amount > 0 ? 'Admin deposit' : 'Admin adjustment'
-            };
+                // Save to Supabase transactions table
+                const { error } = await window.supabase
+                    .from('transactions')
+                    .insert([transaction]);
 
-            transactions.push(transaction);
-            localStorage.setItem(transactionKey, JSON.stringify(transactions));
+                if (error) {
+                    console.error('❌ Error saving transaction:', error);
+                    // Fallback to localStorage
+                    const transactionKey = `transactions_${email}`;
+                    const transactions = JSON.parse(localStorage.getItem(transactionKey) || '[]');
+                    transactions.push({
+                        id: Date.now(),
+                        type: type,
+                        amount: amount,
+                        date: new Date().toISOString(),
+                        description: amount > 0 ? 'Admin deposit' : 'Admin adjustment'
+                    });
+                    localStorage.setItem(transactionKey, JSON.stringify(transactions));
+                    console.log('📦 Transaction saved to localStorage as fallback');
+                } else {
+                    console.log('✅ Transaction saved to Supabase:', transaction);
+                }
+            } catch (error) {
+                console.error('❌ Error in addTransactionRecord:', error);
+            }
         }
 
         // Search functionality
